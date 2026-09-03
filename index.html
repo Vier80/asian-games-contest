@@ -322,7 +322,7 @@ html_content = """<!DOCTYPE html>
             if(!nickname) {
                 alert("Per favore, inserisci il tuo Nickname prima di inviare!");
                 document.getElementById('participant-nickname').focus();
-                return;
+                return; 
             }
             if(Object.keys(window.userSelections).length < window.eventsData.length) {
                 alert(`Hai completato ${Object.keys(window.userSelections.length)} su ${window.eventsData.length} eventi. Rispondi a tutto prima di inviare!`);
