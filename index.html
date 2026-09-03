@@ -354,7 +354,7 @@ html_content = """<!DOCTYPE html>
 
         // Generazione PDF
         window.generatePDF = async function() {
-            const nickname = document.getElementById('participant-nickname'].value.trim() || "Partecipante";
+            const nickname = document.getElementById('participant-nickname').value.trim() || "Partecipante";
             const { jsPDF } = window.jspdf;
             const docPdf = new jsPDF();
 
