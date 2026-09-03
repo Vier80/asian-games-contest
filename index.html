@@ -1,4 +1,4 @@
-html_content = """<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="it">
 <head>
     <meta charset="UTF-8">
@@ -41,7 +41,7 @@ html_content = """<!DOCTYPE html>
                 </div>
             </div>
             <div id="status-badge" class="bg-asianDark text-xs font-semibold px-3 py-1 rounded-full border border-purple-400">
-                Modalità: In attesa dati Excel
+                Modalità: In attesa...
             </div>
         </div>
     </header>
@@ -77,7 +77,6 @@ html_content = """<!DOCTYPE html>
             </div>
             
             <div id="events-container" class="space-y-4">
-                <!-- I box degli eventi verranno generati dinamicamente qui -->
                 <div class="bg-white p-6 rounded-xl shadow border border-dashed border-gray-300 text-center text-gray-400">
                     Nessun evento caricato. L'Admin deve prima caricare il file Excel con i 15 eventi!
                 </div>
@@ -192,34 +191,31 @@ html_content = """<!DOCTYPE html>
 
     <!-- LOGICA FIREBASE E GIOCO -->
     <script type="module">
-        // ⚠️ ZONA DA MODIFICARE PER LA MISSIONE A (INCOLLA QUI I DATI DI FIREBASE) ⚠️
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getFirestore, collection, setDoc, getDocs, doc, deleteDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
-  apiKey: "AIzaSyAYOB8sCakV4TqnL60TLM8s31CmNPcwESw",
-  authDomain: "asiangames2026-e3b1e.firebaseapp.com",
-  projectId: "asiangames2026-e3b1e",
-  storageBucket: "asiangames2026-e3b1e.firebasestorage.app",
-  messagingSenderId: "897993177226",
-  appId: "1:897993177226:web:fcf266e8a332049c9a1573"
-};
+            apiKey: "AIzaSyAYOB8sCakV4TqnL60TLM8s31CmNPcwESw",
+            authDomain: "asiangames2026-e3b1e.firebaseapp.com",
+            projectId: "asiangames2026-e3b1e",
+            storageBucket: "asiangames2026-e3b1e.firebasestorage.app",
+            messagingSenderId: "897993177226",
+            appId: "1:897993177226:web:fcf266e8a332049c9a1573"
+        };
 
         // Inizializzazione sicura con fallback locale se non configurato
         let db = null;
         let isFirebaseActive = false;
+        
         try {
-            if(myFirebaseConfig.apiKey !== ""AIzaSyAYOB8sCakV4TqnL60TLM8s31CmNPcwESw"") {
-                const app = initializeApp(myFirebaseConfig);
-                db = getFirestore(app);
-                isFirebaseActive = true;
-                document.getElementById('status-badge').innerText = "Modalità: Online (Firebase Attivo)";
-                document.getElementById('status-badge').className = "bg-green-600 text-white text-xs font-semibold px-3 py-1 rounded-full";
-            } else {
-                document.getElementById('status-badge').innerText = "Modalità: Offline / Demo";
-            }
+            const app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            isFirebaseActive = true;
+            document.getElementById('status-badge').innerText = "Modalità: Online (Firebase Attivo)";
+            document.getElementById('status-badge').className = "bg-green-600 text-white text-xs font-semibold px-3 py-1 rounded-full";
         } catch(e) {
             console.warn("Firebase non configurato correttamente. Funzionamento in locale.");
+            document.getElementById('status-badge').innerText = "Modalità: Offline / Demo";
         }
 
         // Variabili globali di stato
@@ -325,7 +321,7 @@ html_content = """<!DOCTYPE html>
                 return; 
             }
             if(Object.keys(window.userSelections).length < window.eventsData.length) {
-                alert(`Hai completato ${Object.keys(window.userSelections.length)} su ${window.eventsData.length} eventi. Rispondi a tutto prima di inviare!`);
+                alert(`Hai completato ${Object.keys(window.userSelections).length} su ${window.eventsData.length} eventi. Rispondi a tutto prima di inviare!`);
                 return;
             }
 
@@ -421,174 +417,27 @@ html_content = """<!DOCTYPE html>
                 btn.className = "pb-2 font-bold text-gray-400 hover:text-asianPurple";
             });
             document.getElementById(tabId).classList.remove('hidden');
-            const activeBtnId = tabId === 'tab-excel' ? 'btn-tab-excel' : tabId === 'tab-risposte' ? 'btn-tab-risposte' : 'btn-tab-ranking';
-            document.getElementById(activeBtnId).className = "pb-2 font-bold text-asianPurple border-b-2 border-asianPurple";
-        }
+            const activeBtnId = tabId === 'tab-excel' ? 'btn-tab-excel' : tabId === 'The Python script for generating your 2026 Asian Games contest hub looks fantastic. The signature "By Vier" branding, combined with the purple and yellow aesthetic via Tailwind, creates a very clean interface for tracking the events. 
 
-        function renderAdminAnswersSetup() {
-            const container = document.getElementById('admin-answers-container');
-            container.innerHTML = '';
-            window.eventsData.forEach(ev => {
-                const div = document.createElement('div');
-                div.className = "p-3 bg-gray-50 rounded border";
-                div.innerHTML = `
-                    <p class="font-bold text-sm mb-1">${ev.id}. ${ev.evento}</p>
-                    <select id="correct_${ev.id}" class="w-full text-sm p-1 border rounded bg-white">
-                        <option value="">-- Seleziona Risposta Corretta --</option>
-                        <option value="A">Picking A (15 pt): ${ev.A}</option>
-                        <option value="B">Picking B (18 pt): ${ev.B}</option>
-                        <option value="C">Picking C (25 pt): ${ev.C}</option>
-                        <option value="field">Picking field (10 pt): ${ev.field}</option>
-                    </select>
-                `;
-                container.appendChild(div);
-            });
-        }
+However, there is a small JavaScript syntax error in the Firebase initialization block that will prevent the page from loading correctly when you open the HTML file. 
 
-        window.saveCorrectAnswers = async function() {
-            window.correctAnswers = {};
-            window.eventsData.forEach(ev => {
-                const val = document.getElementById(`correct_${ev.id}`).value;
-                if(val) window.correctAnswers[ev.id] = val;
-            });
+Here is how to fix the `try...catch` block around line 150. You need to use the `firebaseConfig` object you defined just above it (instead of `myFirebaseConfig`) and remove the double quotation marks around the API key:
 
-            if(isFirebaseActive && db) {
-                await setDoc(doc(db, "settings", "correctAnswers"), { answers: window.correctAnswers });
-            }
-            localStorage.setItem('correct_answers', JSON.stringify(window.correctAnswers));
-            alert("Risposte corrette salvate con successo!");
-            loadParticipantsData(); // Ricalcola classifica
-        }
-
-        async function loadAdminAnswers() {
-            if(isFirebaseActive && db) {
-                const docSnap = await getDoc(doc(db, "settings", "correctAnswers"));
-                if(docSnap.exists()) {
-                    window.correctAnswers = docSnap.data().answers || {};
-                }
+```javascript
+        // Inizializzazione sicura con fallback locale se non configurato
+        let db = null;
+        let isFirebaseActive = false;
+        try {
+            // Corrected variable name and fixed the quote syntax
+            if(firebaseConfig.apiKey !== "AIzaSyAYOB8sCakV4TqnL60TLM8s31CmNPcwESw") {
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                isFirebaseActive = true;
+                document.getElementById('status-badge').innerText = "Modalità: Online (Firebase Attivo)";
+                document.getElementById('status-badge').className = "bg-green-600 text-white text-xs font-semibold px-3 py-1 rounded-full";
             } else {
-                window.correctAnswers = JSON.parse(localStorage.getItem('correct_answers') || "{}");
+                document.getElementById('status-badge').innerText = "Modalità: Offline / Demo";
             }
-            // Imposta i selettori se già salvati
-            for(let id in window.correctAnswers) {
-                const sel = document.getElementById(`correct_${id}`);
-                if(sel) sel.value = window.correctAnswers[id];
-            }
+        } catch(e) {
+            console.warn("Firebase non configurato correttamente. Funzionamento in locale.");
         }
-
-        window.loadParticipantsData = async function() {
-            let participantsList = [];
-
-            if(isFirebaseActive && db) {
-                const querySnapshot = await getDocs(collection(db, "participants"));
-                querySnapshot.forEach((docSnap) => {
-                    participantsList.push(docSnap.data());
-                });
-            } else {
-                let localParts = JSON.parse(localStorage.getItem('local_participants') || "{}");
-                participantsList = Object.values(localParts);
-            }
-
-            // Calcolo punteggi in base alle regole: A=15, B=18, C=25, field=10
-            const pointsMap = { 'A': 15, 'B': 18, 'C': 25, 'field': 10 };
-
-            participantsList.forEach(p => {
-                let score = 0;
-                for(let evId in p.selections) {
-                    const userChoice = p.selections[evId].key;
-                    const correctChoice = window.correctAnswers[evId];
-                    if(correctChoice && userChoice === correctChoice) {
-                        score += (pointsMap[correctChoice] || 0);
-                    }
-                }
-                p.score = score;
-            });
-
-            // Ordinamento per ranking (punteggio decrescente)
-            participantsList.sort((a, b) => b.score - a.score);
-
-            const tbody = document.getElementById('ranking-tbody');
-            tbody.innerHTML = '';
-
-            if(participantsList.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-gray-400">Nessun partecipante registrato finora.</td></tr>`;
-                return;
-            }
-
-            participantsList.forEach((p, idx) => {
-                const tr = document.createElement('tr');
-                tr.className = "border-b hover:bg-purple-50";
-                tr.innerHTML = `
-                    <td class="p-2 font-bold">#${idx + 1}</td>
-                    <td class="p-2 font-semibold text-asianPurple">${p.nickname}</td>
-                    <td class="p-2 font-bold text-gray-800">${p.score} pt</td>
-                    <td class="p-2 text-center space-x-2">
-                        <button onclick='showParticipantDetail(${JSON.stringify(p)})' class="bg-purple-100 text-asianPurple px-2 py-1 rounded text-xs font-bold">👁️ Vedi</button>
-                        <button onclick="deleteParticipant('${p.nickname}')" class="bg-red-100 text-red-600 px-2 py-1 rounded text-xs font-bold">🗑️ Elimina</button>
-                    </td>
-                `;
-                tbody.appendChild(tr);
-            });
-        }
-
-        window.showParticipantDetail = function(part) {
-            document.getElementById('modal-title').innerText = `Pronostico di: ${part.nickname} (${part.score} pt)`;
-            const content = document.getElementById('modal-content');
-            content.innerHTML = '';
-
-            for(let evId in part.selections) {
-                const sel = part.selections[evId];
-                const correct = window.correctAnswers[evId];
-                const isCorrect = correct && sel.key === correct;
-                const div = document.createElement('div');
-                div.className = `p-2 rounded border ${isCorrect ? 'bg-green-50 border-green-200' : 'bg-gray-50'}`;
-                div.innerHTML = `
-                    <p class="font-bold text-xs text-gray-600">Evento #${evId}</p>
-                    <p class="text-sm">Scelta: <strong class="text-asianPurple">[${sel.key.toUpperCase()}]</strong> ${sel.text}</p>
-                    ${correct ? `<p class="text-xs ${isCorrect ? 'text-green-600 font-bold' : 'text-red-500'}">Esatta era: [${correct.toUpperCase()}]</p>` : ''}
-                `;
-                content.appendChild(div);
-            }
-            document.getElementById('detail-modal').classList.remove('hidden');
-        }
-
-        window.closeModal = function() {
-            document.getElementById('detail-modal').classList.add('hidden');
-        }
-
-        window.deleteParticipant = async function(nickname) {
-            if(confirm(`Sei sicuro di voler eliminare il partecipante ${nickname}?`)) {
-                if(isFirebaseActive && db) {
-                    try {
-                        await deleteDoc(doc(db, "participants", nickname));
-                    } catch(e) {
-                        console.error(e);
-                    }
-                } else {
-                    let localParts = JSON.parse(localStorage.getItem('local_participants') || "{}");
-                    delete localParts[nickname];
-                    localStorage.setItem('local_participants', JSON.stringify(localParts));
-                }
-                alert("Partecipante eliminato.");
-                loadParticipantsData();
-            }
-        }
-
-        // Auto-caricamento dati locali all'avvio se presenti
-        window.addEventListener('DOMContentLoaded', () => {
-            const savedEvents = localStorage.getItem('asian_events');
-            if(savedEvents) {
-                window.eventsData = JSON.parse(savedEvents);
-                renderEvents();
-                renderAdminAnswersSetup();
-            }
-        });
-    </script>
-</body>
-</html>
-"""
-
-with open("index.html", "w", encoding="utf-8") as f:
-    f.write(html_content)
-
-print("File index.html generato con successo!")
