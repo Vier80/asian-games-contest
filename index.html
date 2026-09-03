@@ -1,0 +1,594 @@
+html_content = """<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2026 Asian Games Contest - By Vier</title>
+    <!-- Tailwind CSS per una grafica moderna e pulita -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        asianPurple: '#512B81',
+                        asianYellow: '#F1C40F',
+                        asianDark: '#2C1654',
+                        asianLight: '#F9F7FC'
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- SheetJS per leggere i file Excel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- jsPDF e html2canvas per creare il file PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body class="bg-asianLight text-gray-800 min-h-screen flex flex-col justify-between font-sans">
+
+    <!-- HEADER UFFICIALE -->
+    <header class="bg-asianPurple text-white shadow-lg border-b-4 border-asianYellow">
+        <div class="max-w-4xl mx-auto px-4 py-6 flex flex-col sm:flex-row items-center justify-between">
+            <div class="flex items-center space-x-4 mb-4 sm:mb-0">
+                <div class="bg-white text-asianPurple font-extrabold text-xl p-3 rounded-full shadow border-2 border-asianYellow">
+                    🥇 2026
+                </div>
+                <div>
+                    <h1 class="text-2xl sm:text-3xl font-black tracking-wider text-asianYellow">ASIAN GAMES 2026</h1>
+                    <p class="text-xs sm:text-sm text-purple-200">Official Prediction Contest & Gaming Hub</p>
+                </div>
+            </div>
+            <div id="status-badge" class="bg-asianDark text-xs font-semibold px-3 py-1 rounded-full border border-purple-400">
+                Modalità: In attesa dati Excel
+            </div>
+        </div>
+    </header>
+
+    <!-- CORPO PRINCIPALE -->
+    <main class="max-w-4xl mx-auto px-4 py-8 flex-grow w-full">
+
+        <!-- SEZIONE 1: LOGIN / INFO PARTECIPANTE -->
+        <section id="user-section" class="bg-white rounded-xl shadow-md p-6 mb-8 border-t-4 border-asianPurple">
+            <h2 class="text-xl font-bold text-asianPurple mb-4 flex items-center">
+                <span class="bg-asianPurple text-white rounded-full w-7 h-7 inline-flex items-center justify-center text-sm mr-2">1</span>
+                Il tuo Profilo Partecipante
+            </h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Il tuo Nickname:</label>
+                    <input type="text" id="participant-nickname" placeholder="Es. DragoRosso2026" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-asianPurple focus:outline-none">
+                </div>
+                <div class="text-xs text-gray-500 bg-purple-50 p-3 rounded-lg border border-purple-100">
+                    💡 Inserisci un nickname unico. Scegli con cura 1 opzione per ognuno dei 15 eventi caricati dall'Admin. Potrai scaricare il tuo riepilogo in PDF!
+                </div>
+            </div>
+        </section>
+
+        <!-- SEZIONE 2: LISTA DEGLI EVENTI -->
+        <section id="events-section" class="mb-8">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-xl font-bold text-asianPurple flex items-center">
+                    <span class="bg-asianPurple text-white rounded-full w-7 h-7 inline-flex items-center justify-center text-sm mr-2">2</span>
+                    Pronostici Eventi (15 in palio)
+                </h2>
+                <span id="events-counter" class="text-xs font-bold bg-asianYellow text-asianDark px-3 py-1 rounded-full">0 / 15 Compilati</span>
+            </div>
+            
+            <div id="events-container" class="space-y-4">
+                <!-- I box degli eventi verranno generati dinamicamente qui -->
+                <div class="bg-white p-6 rounded-xl shadow border border-dashed border-gray-300 text-center text-gray-400">
+                    Nessun evento caricato. L'Admin deve prima caricare il file Excel con i 15 eventi!
+                </div>
+            </div>
+        </section>
+
+        <!-- SEZIONE 3: PULSANTI DI INVIO / PDF -->
+        <section id="action-section" class="bg-white rounded-xl shadow-md p-6 mb-8 text-center hidden">
+            <h3 class="text-lg font-bold text-asianPurple mb-2">Sei pronto a inviare i tuoi pronostici?</h3>
+            <p class="text-sm text-gray-600 mb-6">Assicurati di aver risposto a tutti gli eventi prima di inviare all'Admin.</p>
+            <div class="flex flex-wrap justify-center gap-4">
+                <button onclick="generatePDF()" class="bg-gray-800 hover:bg-black text-white font-bold px-6 py-3 rounded-lg shadow transition flex items-center space-x-2">
+                    <span>📄 Scarica Riepilogo PDF</span>
+                </button>
+                <button onclick="submitContest()" class="bg-asianPurple hover:bg-asianDark text-asianYellow font-extrabold px-8 py-3 rounded-lg shadow-lg transition flex items-center space-x-2 border-2 border-asianYellow">
+                    <span>🚀 Invia Pronostici all'Admin</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- ACCESSO ADMIN (LUCCHETTO) -->
+        <div class="text-center mt-12 mb-4">
+            <button onclick="toggleAdminLogin()" class="text-xs text-purple-700 hover:underline flex items-center justify-center mx-auto space-x-1">
+                <span>🔒 Area Riservata Admin</span>
+            </button>
+        </div>
+
+        <!-- PANNELLO ADMIN (NASCOSTO) -->
+        <div id="admin-panel" class="bg-white rounded-xl shadow-2xl p-6 border-4 border-asianYellow hidden mb-12">
+            <div class="flex justify-between items-center mb-6 border-b pb-4">
+                <h3 class="text-xl font-black text-asianPurple">🛠️ Pannello di Controllo Admin</h3>
+                <button onclick="toggleAdminLogin()" class="text-sm text-red-500 font-bold hover:underline">Chiudi X</button>
+            </div>
+
+            <!-- Login Admin Form -->
+            <div id="admin-login-box" class="max-w-xs mx-auto text-center py-6">
+                <p class="text-sm mb-3 text-gray-600">Inserisci la password di sblocco:</p>
+                <input type="password" id="admin-pass" placeholder="Password..." class="w-full px-4 py-2 border rounded mb-3 text-center focus:outline-none focus:ring-2 focus:ring-asianPurple">
+                <button onclick="verifyAdmin()" class="w-full bg-asianPurple text-white font-bold py-2 rounded shadow">Accedi</button>
+            </div>
+
+            <!-- Dashboard Admin (visibile dopo login) -->
+            <div id="admin-dashboard" class="hidden">
+                <!-- Tab Menu -->
+                <div class="flex border-b mb-6 space-x-4">
+                    <button onclick="switchAdminTab('tab-excel')" id="btn-tab-excel" class="pb-2 font-bold text-asianPurple border-b-2 border-asianPurple">1. Carica Excel</button>
+                    <button onclick="switchAdminTab('tab-risposte')" id="btn-tab-risposte" class="pb-2 font-bold text-gray-400 hover:text-asianPurple">2. Risposte Esatte</button>
+                    <button onclick="switchAdminTab('tab-ranking')" id="btn-tab-ranking" class="pb-2 font-bold text-gray-400 hover:text-asianPurple">3. Ranking & Giocatori</button>
+                </div>
+
+                <!-- Tab 1: Carica Excel -->
+                <div id="tab-excel" class="space-y-4">
+                    <h4 class="font-bold text-gray-700">Carica il file Excel dei 15 Eventi</h4>
+                    <p class="text-xs text-gray-500">Il file deve contenere le colonne: <span class="font-semibold text-asianPurple">Data, Sport, Evento, Picking #A, Picking #B, Picking #C, Picking #field</span></p>
+                    <input type="file" id="excel-file-input" accept=".xlsx, .xls" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-asianPurple hover:file:bg-purple-100">
+                    <button onclick="handleExcelUpload()" class="bg-asianPurple text-asianYellow font-bold px-4 py-2 rounded shadow text-sm">Elabora File Excel</button>
+                </div>
+
+                <!-- Tab 2: Inserisci Risposte Corrette -->
+                <div id="tab-risposte" class="space-y-4 hidden">
+                    <h4 class="font-bold text-gray-700">Imposta le Risposte Corrette per ciascun evento</h4>
+                    <div id="admin-answers-container" class="space-y-3 max-h-96 overflow-y-auto pr-2">
+                        <!-- Generato dinamicamente -->
+                    </div>
+                    <button onclick="saveCorrectAnswers()" class="bg-green-600 hover:bg-green-700 text-white font-bold px-6 py-2 rounded shadow text-sm">Salva Risposte Corrette</button>
+                </div>
+
+                <!-- Tab 3: Ranking e Partecipanti -->
+                <div id="tab-ranking" class="space-y-4 hidden">
+                    <div class="flex justify-between items-center">
+                        <h4 class="font-bold text-gray-700">Tabella Ranking & Pronostici Partecipanti</h4>
+                        <button onclick="loadParticipantsData()" class="text-xs bg-purple-100 text-asianPurple px-3 py-1 rounded font-bold">Aggiorna Dati</button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-sm">
+                            <thead>
+                                <tr class="bg-asianPurple text-white">
+                                    <th class="p-2">Pos</th>
+                                    <th class="p-2">Nickname</th>
+                                    <th class="p-2">Punteggio</th>
+                                    <th class="p-2 text-center">Azioni / Pronostici</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ranking-tbody">
+                                <!-- Popolato da Firebase -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="bg-asianDark text-purple-300 text-xs py-4 text-center border-t border-purple-900">
+        <p>2026 Asian Games Contest Hub • Grafica ufficiale Viola & Giallo Ocra • Sviluppato per Gualtiero</p>
+    </footer>
+
+    <!-- MODALE DETTAGLIO PRONOSTICO PARTECIPANTE -->
+    <div id="detail-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden z-50">
+        <div class="bg-white rounded-xl max-w-lg w-full p-6 shadow-2xl max-h-[80vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4 border-b pb-2">
+                <h4 id="modal-title" class="font-bold text-asianPurple text-lg">Pronostico Giocatore</h4>
+                <button onclick="closeModal()" class="text-red-500 font-bold text-sm">Chiudi X</button>
+            </div>
+            <div id="modal-content" class="space-y-2 text-sm">
+                <!-- Contenuto dettagli -->
+            </div>
+        </div>
+    </div>
+
+    <!-- LOGICA FIREBASE E GIOCO -->
+    <script type="module">
+        // ⚠️ ZONA DA MODIFICARE PER LA MISSIONE A (INCOLLA QUI I DATI DI FIREBASE) ⚠️
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, setDoc, getDocs, doc, deleteDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+  apiKey: "AIzaSyAYOB8sCakV4TqnL60TLM8s31CmNPcwESw",
+  authDomain: "asiangames2026-e3b1e.firebaseapp.com",
+  projectId: "asiangames2026-e3b1e",
+  storageBucket: "asiangames2026-e3b1e.firebasestorage.app",
+  messagingSenderId: "897993177226",
+  appId: "1:897993177226:web:fcf266e8a332049c9a1573"
+};
+
+        // Inizializzazione sicura con fallback locale se non configurato
+        let db = null;
+        let isFirebaseActive = false;
+        try {
+            if(myFirebaseConfig.apiKey !== ""AIzaSyAYOB8sCakV4TqnL60TLM8s31CmNPcwESw"") {
+                const app = initializeApp(myFirebaseConfig);
+                db = getFirestore(app);
+                isFirebaseActive = true;
+                document.getElementById('status-badge').innerText = "Modalità: Online (Firebase Attivo)";
+                document.getElementById('status-badge').className = "bg-green-600 text-white text-xs font-semibold px-3 py-1 rounded-full";
+            } else {
+                document.getElementById('status-badge').innerText = "Modalità: Offline / Demo";
+            }
+        } catch(e) {
+            console.warn("Firebase non configurato correttamente. Funzionamento in locale.");
+        }
+
+        // Variabili globali di stato
+        window.eventsData = [];
+        window.userSelections = {};
+        window.correctAnswers = {};
+
+        // Caricamento Excel
+        window.handleExcelUpload = function() {
+            const fileInput = document.getElementById('excel-file-input');
+            if(!fileInput.files.length) {
+                alert("Seleziona prima un file Excel!");
+                return;
+            }
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                const json = XLSX.utils.sheet_to_json(worksheet);
+
+                if(json.length === 0) {
+                    alert("Il file Excel è vuoto!");
+                    return;
+                }
+
+                // Normalizziamo i dati attesi
+                window.eventsData = json.map((row, index) => ({
+                    id: index + 1,
+                    data: row['Data'] || row['data'] || 'Data non specificata',
+                    sport: row['Sport'] || row['sport'] || 'Sport',
+                    evento: row['Evento'] || row['evento'] || `Evento ${index + 1}`,
+                    A: row['Picking #A'] || row['Picking A'] || row['A'] || 'Opzione A',
+                    B: row['Picking #B'] || row['Picking B'] || row['B'] || 'Opzione B',
+                    C: row['Picking #C'] || row['Picking C'] || row['C'] || 'Opzione C',
+                    field: row['Picking #field'] || row['Picking field'] || row['field'] || 'Field'
+                }));
+
+                // Salviamo anche in localStorage per comodità locale
+                localStorage.setItem('asian_events', JSON.stringify(window.eventsData));
+                renderEvents();
+                renderAdminAnswersSetup();
+                alert(`Caricati con successo ${window.eventsData.length} eventi dal file Excel!`);
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        // Rendering degli eventi nella pagina principale
+        function renderEvents() {
+            const container = document.getElementById('events-container');
+            const actionSec = document.getElementById('action-section');
+            if(!window.eventsData.length) return;
+
+            container.innerHTML = '';
+            window.eventsData.forEach((ev) => {
+                const div = document.createElement('div');
+                div.className = "bg-white p-5 rounded-xl shadow-md border-l-4 border-asianPurple mb-4";
+                div.innerHTML = `
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3">
+                        <span class="text-xs bg-purple-100 text-asianPurple font-bold px-2 py-1 rounded mb-1 sm:mb-0">📅 ${ev.data} • 🏆 ${ev.sport}</span>
+                        <span class="text-xs font-semibold text-gray-500">Evento #${ev.id}</span>
+                    </div>
+                    <h3 class="font-bold text-lg text-gray-800 mb-3">${ev.evento}</h3>
+                    <p class="text-xs text-gray-500 mb-2">Seleziona 1 sola opzione:</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <label class="flex items-center space-x-2 p-2 rounded border border-gray-200 hover:bg-purple-50 cursor-pointer">
+                            <input type="radio" name="event_${ev.id}" value="A" onchange="selectOption(${ev.id}, 'A', '${ev.A.replace(/'/g, "\\'")}')">
+                            <span class="text-sm"><strong>[A - 15 pt]:</strong> ${ev.A}</span>
+                        </label>
+                        <label class="flex items-center space-x-2 p-2 rounded border border-gray-200 hover:bg-purple-50 cursor-pointer">
+                            <input type="radio" name="event_${ev.id}" value="B" onchange="selectOption(${ev.id}, 'B', '${ev.B.replace(/'/g, "\\'")}')">
+                            <span class="text-sm"><strong>[B - 18 pt]:</strong> ${ev.B}</span>
+                        </label>
+                        <label class="flex items-center space-x-2 p-2 rounded border border-gray-200 hover:bg-purple-50 cursor-pointer">
+                            <input type="radio" name="event_${ev.id}" value="C" onchange="selectOption(${ev.id}, 'C', '${ev.C.replace(/'/g, "\\'")}')">
+                            <span class="text-sm"><strong>[C - 25 pt]:</strong> ${ev.C}</span>
+                        </label>
+                        <label class="flex items-center space-x-2 p-2 rounded border border-gray-200 hover:bg-purple-50 cursor-pointer">
+                            <input type="radio" name="event_${ev.id}" value="field" onchange="selectOption(${ev.id}, 'field', '${ev.field.replace(/'/g, "\\'")}')">
+                            <span class="text-sm"><strong>[field - 10 pt]:</strong> ${ev.field}</span>
+                        </label>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+            actionSec.classList.remove('hidden');
+        }
+
+        window.selectOption = function(eventId, choiceKey, choiceText) {
+            window.userSelections[eventId] = { key: choiceKey, text: choiceText };
+            const count = Object.keys(window.userSelections).length;
+            document.getElementById('events-counter').innerText = `${count} / 15 Compilati`;
+        }
+
+        // Invia contest
+        window.submitContest = async function() {
+            const nickname = document.getElementById('participant-nickname').value.trim();
+            if(!nickname) {
+                alert("Per favore, inserisci il tuo Nickname prima di inviare!");
+                document.getElementById('participant-nickname').focus();
+                return;
+            }
+            if(Object.keys(window.userSelections).length < window.eventsData.length) {
+                alert(`Hai completato ${Object.keys(window.userSelections.length)} su ${window.eventsData.length} eventi. Rispondi a tutto prima di inviare!`);
+                return;
+            }
+
+            const payload = {
+                nickname: nickname,
+                selections: window.userSelections,
+                timestamp: new Date().toISOString()
+            };
+
+            if(isFirebaseActive && db) {
+                try {
+                    await setDoc(doc(db, "participants", nickname), payload);
+                    alert("Pronostici inviati con successo all'Admin tramite Firebase! 🎉");
+                } catch(err) {
+                    console.error(err);
+                    alert("Errore di invio su Firebase. Salva il tuo PDF come backup.");
+                }
+            } else {
+                // Salvataggio locale demo
+                let localParts = JSON.parse(localStorage.getItem('local_participants') || "{}");
+                localParts[nickname] = payload;
+                localStorage.setItem('local_participants', JSON.stringify(localParts));
+                alert("Pronostici salvati in modalità locale con successo! 🎉");
+            }
+        }
+
+        // Generazione PDF
+        window.generatePDF = async function() {
+            const nickname = document.getElementById('participant-nickname'].value.trim() || "Partecipante";
+            const { jsPDF } = window.jspdf;
+            const docPdf = new jsPDF();
+
+            docPdf.setFont("helvetica", "bold");
+            docPdf.setFontSize(18);
+            docPdf.setTextColor(81, 43, 129); // Viola
+            docPdf.text("2026 Asian Games - Riepilogo Pronostici", 14, 20);
+
+            docPdf.setFontSize(11);
+            docPdf.setTextColor(100, 100, 100);
+            docPdf.text(`Partecipante: ${nickname}`, 14, 28);
+            docPdf.text(`Data generazione: ${new Date().toLocaleDateString()}`, 14, 34);
+
+            let y = 45;
+            docPdf.setFontSize(10);
+            window.eventsData.forEach((ev) => {
+                const userSel = window.userSelections[ev.id];
+                const selText = userSel ? `[${userSel.key.toUpperCase()}] ${userSel.text}` : "Nessuna scelta";
+                
+                if(y > 270) {
+                    docPdf.addPage();
+                    y = 20;
+                }
+
+                docPdf.setFont("helvetica", "bold");
+                docPdf.setTextColor(40, 40, 40);
+                docPdf.text(`${ev.id}. ${ev.evento} (${ev.sport})`, 14, y);
+                y += 6;
+
+                docPdf.setFont("helvetica", "normal");
+                docPdf.setTextColor(81, 43, 129);
+                docPdf.text(`Scelta: ${selText}`, 18, y);
+                y += 10;
+            });
+
+            docPdf.save(`Pronostici_AsianGames_${nickname}.pdf`);
+        }
+
+        // Area Admin
+        window.toggleAdminLogin = function() {
+            const panel = document.getElementById('admin-panel');
+            panel.classList.toggle('hidden');
+            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+        }
+
+        window.verifyAdmin = function() {
+            const pass = document.getElementById('admin-pass').value;
+            if(pass === "Stefan023*") {
+                document.getElementById('admin-login-box').classList.add('hidden');
+                document.getElementById('admin-dashboard').classList.remove('hidden');
+                loadAdminAnswers();
+                loadParticipantsData();
+            } else {
+                alert("Password errata!");
+            }
+        }
+
+        window.switchAdminTab = function(tabId) {
+            ['tab-excel', 'tab-risposte', 'tab-ranking'].forEach(id => {
+                document.getElementById(id).classList.add('hidden');
+            });
+            ['btn-tab-excel', 'btn-tab-risposte', 'btn-tab-ranking'].forEach(id => {
+                const btn = document.getElementById(id);
+                btn.className = "pb-2 font-bold text-gray-400 hover:text-asianPurple";
+            });
+            document.getElementById(tabId).classList.remove('hidden');
+            const activeBtnId = tabId === 'tab-excel' ? 'btn-tab-excel' : tabId === 'tab-risposte' ? 'btn-tab-risposte' : 'btn-tab-ranking';
+            document.getElementById(activeBtnId).className = "pb-2 font-bold text-asianPurple border-b-2 border-asianPurple";
+        }
+
+        function renderAdminAnswersSetup() {
+            const container = document.getElementById('admin-answers-container');
+            container.innerHTML = '';
+            window.eventsData.forEach(ev => {
+                const div = document.createElement('div');
+                div.className = "p-3 bg-gray-50 rounded border";
+                div.innerHTML = `
+                    <p class="font-bold text-sm mb-1">${ev.id}. ${ev.evento}</p>
+                    <select id="correct_${ev.id}" class="w-full text-sm p-1 border rounded bg-white">
+                        <option value="">-- Seleziona Risposta Corretta --</option>
+                        <option value="A">Picking A (15 pt): ${ev.A}</option>
+                        <option value="B">Picking B (18 pt): ${ev.B}</option>
+                        <option value="C">Picking C (25 pt): ${ev.C}</option>
+                        <option value="field">Picking field (10 pt): ${ev.field}</option>
+                    </select>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        window.saveCorrectAnswers = async function() {
+            window.correctAnswers = {};
+            window.eventsData.forEach(ev => {
+                const val = document.getElementById(`correct_${ev.id}`).value;
+                if(val) window.correctAnswers[ev.id] = val;
+            });
+
+            if(isFirebaseActive && db) {
+                await setDoc(doc(db, "settings", "correctAnswers"), { answers: window.correctAnswers });
+            }
+            localStorage.setItem('correct_answers', JSON.stringify(window.correctAnswers));
+            alert("Risposte corrette salvate con successo!");
+            loadParticipantsData(); // Ricalcola classifica
+        }
+
+        async function loadAdminAnswers() {
+            if(isFirebaseActive && db) {
+                const docSnap = await getDoc(doc(db, "settings", "correctAnswers"));
+                if(docSnap.exists()) {
+                    window.correctAnswers = docSnap.data().answers || {};
+                }
+            } else {
+                window.correctAnswers = JSON.parse(localStorage.getItem('correct_answers') || "{}");
+            }
+            // Imposta i selettori se già salvati
+            for(let id in window.correctAnswers) {
+                const sel = document.getElementById(`correct_${id}`);
+                if(sel) sel.value = window.correctAnswers[id];
+            }
+        }
+
+        window.loadParticipantsData = async function() {
+            let participantsList = [];
+
+            if(isFirebaseActive && db) {
+                const querySnapshot = await getDocs(collection(db, "participants"));
+                querySnapshot.forEach((docSnap) => {
+                    participantsList.push(docSnap.data());
+                });
+            } else {
+                let localParts = JSON.parse(localStorage.getItem('local_participants') || "{}");
+                participantsList = Object.values(localParts);
+            }
+
+            // Calcolo punteggi in base alle regole: A=15, B=18, C=25, field=10
+            const pointsMap = { 'A': 15, 'B': 18, 'C': 25, 'field': 10 };
+
+            participantsList.forEach(p => {
+                let score = 0;
+                for(let evId in p.selections) {
+                    const userChoice = p.selections[evId].key;
+                    const correctChoice = window.correctAnswers[evId];
+                    if(correctChoice && userChoice === correctChoice) {
+                        score += (pointsMap[correctChoice] || 0);
+                    }
+                }
+                p.score = score;
+            });
+
+            // Ordinamento per ranking (punteggio decrescente)
+            participantsList.sort((a, b) => b.score - a.score);
+
+            const tbody = document.getElementById('ranking-tbody');
+            tbody.innerHTML = '';
+
+            if(participantsList.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-gray-400">Nessun partecipante registrato finora.</td></tr>`;
+                return;
+            }
+
+            participantsList.forEach((p, idx) => {
+                const tr = document.createElement('tr');
+                tr.className = "border-b hover:bg-purple-50";
+                tr.innerHTML = `
+                    <td class="p-2 font-bold">#${idx + 1}</td>
+                    <td class="p-2 font-semibold text-asianPurple">${p.nickname}</td>
+                    <td class="p-2 font-bold text-gray-800">${p.score} pt</td>
+                    <td class="p-2 text-center space-x-2">
+                        <button onclick='showParticipantDetail(${JSON.stringify(p)})' class="bg-purple-100 text-asianPurple px-2 py-1 rounded text-xs font-bold">👁️ Vedi</button>
+                        <button onclick="deleteParticipant('${p.nickname}')" class="bg-red-100 text-red-600 px-2 py-1 rounded text-xs font-bold">🗑️ Elimina</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        window.showParticipantDetail = function(part) {
+            document.getElementById('modal-title').innerText = `Pronostico di: ${part.nickname} (${part.score} pt)`;
+            const content = document.getElementById('modal-content');
+            content.innerHTML = '';
+
+            for(let evId in part.selections) {
+                const sel = part.selections[evId];
+                const correct = window.correctAnswers[evId];
+                const isCorrect = correct && sel.key === correct;
+                const div = document.createElement('div');
+                div.className = `p-2 rounded border ${isCorrect ? 'bg-green-50 border-green-200' : 'bg-gray-50'}`;
+                div.innerHTML = `
+                    <p class="font-bold text-xs text-gray-600">Evento #${evId}</p>
+                    <p class="text-sm">Scelta: <strong class="text-asianPurple">[${sel.key.toUpperCase()}]</strong> ${sel.text}</p>
+                    ${correct ? `<p class="text-xs ${isCorrect ? 'text-green-600 font-bold' : 'text-red-500'}">Esatta era: [${correct.toUpperCase()}]</p>` : ''}
+                `;
+                content.appendChild(div);
+            }
+            document.getElementById('detail-modal').classList.remove('hidden');
+        }
+
+        window.closeModal = function() {
+            document.getElementById('detail-modal').classList.add('hidden');
+        }
+
+        window.deleteParticipant = async function(nickname) {
+            if(confirm(`Sei sicuro di voler eliminare il partecipante ${nickname}?`)) {
+                if(isFirebaseActive && db) {
+                    try {
+                        await deleteDoc(doc(db, "participants", nickname));
+                    } catch(e) {
+                        console.error(e);
+                    }
+                } else {
+                    let localParts = JSON.parse(localStorage.getItem('local_participants') || "{}");
+                    delete localParts[nickname];
+                    localStorage.setItem('local_participants', JSON.stringify(localParts));
+                }
+                alert("Partecipante eliminato.");
+                loadParticipantsData();
+            }
+        }
+
+        // Auto-caricamento dati locali all'avvio se presenti
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedEvents = localStorage.getItem('asian_events');
+            if(savedEvents) {
+                window.eventsData = JSON.parse(savedEvents);
+                renderEvents();
+                renderAdminAnswersSetup();
+            }
+        });
+    </script>
+</body>
+</html>
+"""
+
+with open("index.html", "w", encoding="utf-8") as f:
+    f.write(html_content)
+
+print("File index.html generato con successo!")
