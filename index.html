@@ -28,13 +28,13 @@
 </head>
 <body class="bg-asianLight text-gray-800 min-h-screen flex flex-col justify-between font-sans">
 
-    <!-- HEADER UFFICIALE -->
+    <!-- HEADER UFFICIALE CON LOGO -->
     <header class="bg-asianPurple text-white shadow-lg border-b-4 border-asianYellow">
         <div class="max-w-4xl mx-auto px-4 py-6 flex flex-col sm:flex-row items-center justify-between">
             <div class="flex items-center space-x-4 mb-4 sm:mb-0">
-                <div class="bg-white text-asianPurple font-extrabold text-xl p-3 rounded-full shadow border-2 border-asianYellow">
-                    🥇 2026
-                </div>
+                <!-- IMMAGINE DEL LOGO (Assicurati di aver caricato logo.jpg su GitHub) -->
+                <img src="logo.jpg" alt="Logo Asian Games 2026" class="h-16 w-auto object-contain bg-white rounded shadow p-1 border-2 border-asianYellow" onerror="this.style.display='none'">
+                
                 <div>
                     <h1 class="text-2xl sm:text-3xl font-black tracking-wider text-asianYellow">ASIAN GAMES 2026</h1>
                     <p class="text-xs sm:text-sm text-purple-200">Official Prediction Contest & Gaming Hub</p>
@@ -237,23 +237,25 @@
                 const workbook = XLSX.read(data, {type: 'array'});
                 const firstSheetName = workbook.SheetNames[0];
                 const worksheet = workbook.Sheets[firstSheetName];
-                const json = XLSX.utils.sheet_to_json(worksheet);
+                
+                // IL SEGRETO DELLA DATA: raw: false formatta la data esattamente come in Excel
+                const json = XLSX.utils.sheet_to_json(worksheet, { raw: false });
 
                 if(json.length === 0) {
                     alert("Il file Excel è vuoto!");
                     return;
                 }
 
-                // Normalizziamo i dati attesi
+                // NORMALIZZAZIONE DATI (Cerca esattamente le intestazioni)
                 window.eventsData = json.map((row, index) => ({
                     id: index + 1,
-                    data: row['Data'] || row['data'] || 'Data non specificata',
+                    data: row['Data'] || row['data'] || 'Data mancante',
                     sport: row['Sport'] || row['sport'] || 'Sport',
                     evento: row['Evento'] || row['evento'] || `Evento ${index + 1}`,
-                    A: row['Picking #A'] || row['Picking A'] || row['A'] || 'Opzione A',
-                    B: row['Picking #B'] || row['Picking B'] || row['B'] || 'Opzione B',
-                    C: row['Picking #C'] || row['Picking C'] || row['C'] || 'Opzione C',
-                    field: row['Picking #field'] || row['Picking field'] || row['field'] || 'Field'
+                    A: row['Picking #A'] || row['Picking A'] || row['A'] || 'Atleta A mancante (Controlla colonna Excel)',
+                    B: row['Picking #B'] || row['Picking B'] || row['B'] || 'Atleta B mancante (Controlla colonna Excel)',
+                    C: row['Picking #C'] || row['Picking C'] || row['C'] || 'Atleta C mancante (Controlla colonna Excel)',
+                    field: row['Picking #field'] || row['Picking field'] || row['field'] || 'Field mancante'
                 }));
 
                 // Salviamo anche in localStorage per comodità locale
