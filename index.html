@@ -73,7 +73,7 @@
             
             <div id="events-container" class="space-y-4">
                 <div class="bg-white p-6 rounded-xl shadow border border-dashed border-gray-300 text-center text-gray-400">
-                    Nessun evento caricato. L'Admin deve prima caricare il file Excel con i 15 eventi!
+                    Caricamento eventi in corso...
                 </div>
             </div>
         </section>
@@ -127,7 +127,7 @@
                     <h4 class="font-bold text-gray-700">Carica il file Excel dei 15 Eventi</h4>
                     <p class="text-xs text-gray-500">Il file deve contenere le colonne: <span class="font-semibold text-asianPurple">Data, Sport, Evento, Picking #A, Picking #B, Picking #C, Picking #field</span></p>
                     <input type="file" id="excel-file-input" accept=".xlsx, .xls" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-asianPurple hover:file:bg-purple-100">
-                    <button onclick="handleExcelUpload()" class="bg-asianPurple text-asianYellow font-bold px-4 py-2 rounded shadow text-sm">Elabora File Excel</button>
+                    <button onclick="handleExcelUpload()" class="bg-asianPurple text-asianYellow font-bold px-4 py-2 rounded shadow text-sm">Elabora e Pubblica Eventi</button>
                 </div>
 
                 <!-- Tab 2: Inserisci Risposte Corrette -->
@@ -198,7 +198,6 @@
             appId: "1:897993177226:web:fcf266e8a332049c9a1573"
         };
 
-        // Inizializzazione Firebase
         let db = null;
         let isFirebaseActive = false;
         
@@ -206,18 +205,38 @@
             const app = initializeApp(firebaseConfig);
             db = getFirestore(app);
             isFirebaseActive = true;
-            console.log("Firebase connesso.");
         } catch(e) {
-            console.warn("Firebase non configurato correttamente. Funzionamento in locale.");
+            console.warn("Firebase non configurato.");
         }
 
-        // Variabili globali di stato
         window.eventsData = [];
         window.userSelections = {};
         window.correctAnswers = {};
 
+        // Caricamento automatico degli eventi da Firebase all'avvio della pagina per qualsiasi utente
+        async function fetchEventsFromCloud() {
+            if(isFirebaseActive && db) {
+                try {
+                    const docSnap = await getDoc(doc(db, "settings", "eventsData"));
+                    if(docSnap.exists()) {
+                        window.eventsData = docSnap.data().events || [];
+                        localStorage.setItem('asian_events', JSON.stringify(window.eventsData));
+                    }
+                } catch(err) {
+                    console.error("Errore recupero eventi cloud:", err);
+                }
+            }
+            // Fallback locale se vuoto
+            if(!window.eventsData.length) {
+                const savedEvents = localStorage.getItem('asian_events');
+                if(savedEvents) {
+                    window.eventsData = JSON.parse(savedEvents);
+                }
+            }
+        }
+
         // Sblocca gli eventi dopo l'inserimento del nickname
-        window.unlockEvents = function() {
+        window.unlockEvents = async function() {
             const nickInput = document.getElementById('participant-nickname');
             const nick = nickInput.value.trim();
             if(!nick) {
@@ -226,7 +245,14 @@
                 return;
             }
             
-            // Blocca la casella e cambia il bottone in confermato (verde)
+            // Assicuriamoci di avere gli eventi caricati dal cloud prima di sbloccare
+            await fetchEventsFromCloud();
+
+            if(!window.eventsData || window.eventsData.length === 0) {
+                alert("L'Admin non ha ancora caricato gli eventi del contest! Riprova più tardi.");
+                return;
+            }
+            
             nickInput.disabled = true;
             const btnStart = document.getElementById('btn-start');
             btnStart.innerText = "✓ Confermato";
@@ -235,17 +261,15 @@
             btnStart.classList.replace('text-asianYellow', 'text-white');
             btnStart.classList.replace('hover:bg-asianDark', 'hover:bg-green-700');
 
-            // Mostra la sezione eventi
+            renderEvents();
+            renderAdminAnswersSetup();
+
             document.getElementById('events-section').classList.remove('hidden');
-            
-            // Se gli eventi sono già caricati, mostra anche i bottoni di invio
-            if(window.eventsData && window.eventsData.length > 0) {
-                document.getElementById('action-section').classList.remove('hidden');
-            }
+            document.getElementById('action-section').classList.remove('hidden');
         }
 
-        // Caricamento Excel
-        window.handleExcelUpload = function() {
+        // Caricamento Excel (Solo Admin)
+        window.handleExcelUpload = async function() {
             const fileInput = document.getElementById('excel-file-input');
             if(!fileInput.files.length) {
                 alert("Seleziona prima un file Excel!");
@@ -253,13 +277,12 @@
             }
             const file = fileInput.files[0];
             const reader = new FileReader();
-            reader.onload = function(e) {
+            reader.onload = async function(e) {
                 const data = new Uint8Array(e.target.result);
                 const workbook = XLSX.read(data, {type: 'array'});
                 const firstSheetName = workbook.SheetNames[0];
                 const worksheet = workbook.Sheets[firstSheetName];
                 
-                // Formatta la data esattamente come in Excel
                 const json = XLSX.utils.sheet_to_json(worksheet, { raw: false });
 
                 if(json.length === 0) {
@@ -267,7 +290,6 @@
                     return;
                 }
 
-                // NORMALIZZAZIONE DATI
                 window.eventsData = json.map((row, index) => ({
                     id: index + 1,
                     data: row['Data'] || row['data'] || 'Data mancante',
@@ -279,11 +301,18 @@
                     field: row['Picking #field'] || row['Picking field'] || row['field'] || 'Field mancante'
                 }));
 
-                // Salvataggio in localStorage per comodità locale
+                // Salva sul cloud di Firebase in modo che siano visibili a tutti tramite il link!
+                if(isFirebaseActive && db) {
+                    try {
+                        await setDoc(doc(db, "settings", "eventsData"), { events: window.eventsData });
+                    } catch(err) {
+                        console.error("Errore salvataggio eventi su Firebase:", err);
+                    }
+                }
+
                 localStorage.setItem('asian_events', JSON.stringify(window.eventsData));
-                renderEvents();
                 renderAdminAnswersSetup();
-                alert(`Caricati con successo ${window.eventsData.length} eventi dal file Excel!`);
+                alert(`Caricati e pubblicati con successo ${window.eventsData.length} eventi online! I partecipanti ora li vedranno subito.`);
             };
             reader.readAsArrayBuffer(file);
         }
@@ -291,8 +320,6 @@
         // Rendering degli eventi
         function renderEvents() {
             const container = document.getElementById('events-container');
-            const actionSec = document.getElementById('action-section');
-            const eventsSec = document.getElementById('events-section');
             if(!window.eventsData.length) return;
 
             container.innerHTML = '';
@@ -327,11 +354,6 @@
                 `;
                 container.appendChild(div);
             });
-            
-            // Mostra i bottoni finali SOLO se l'utente ha sbloccato la sezione eventi
-            if (!eventsSec.classList.contains('hidden')) {
-                actionSec.classList.remove('hidden'); 
-            }
         }
 
         window.selectOption = function(eventId, choiceKey, choiceText) {
@@ -361,7 +383,7 @@
             if(isFirebaseActive && db) {
                 try {
                     await setDoc(doc(db, "participants", nickname), payload);
-                    alert("Pronostici inviati con successo all'Admin tramite Firebase! 🎉");
+                    alert("Pronostici inviati con successo all'Admin! 🎉");
                 } catch(err) {
                     console.error(err);
                     alert("Errore di invio su Firebase. Salva il tuo PDF come backup.");
@@ -382,7 +404,7 @@
 
             docPdf.setFont("helvetica", "bold");
             docPdf.setFontSize(18);
-            docPdf.setTextColor(81, 43, 129); // Viola
+            docPdf.setTextColor(81, 43, 129);
             docPdf.text("2026 Asian Games - Riepilogo Pronostici", 14, 20);
 
             docPdf.setFontSize(11);
@@ -483,7 +505,7 @@
             }
             localStorage.setItem('correct_answers', JSON.stringify(window.correctAnswers));
             alert("Risposte corrette salvate con successo!");
-            loadParticipantsData(); // Ricalcola classifica
+            loadParticipantsData();
         }
 
         async function loadAdminAnswers() {
@@ -597,13 +619,9 @@
             }
         }
 
+        // All'avvio, scarica subito gli eventi dal cloud se disponibili
         window.addEventListener('DOMContentLoaded', () => {
-            const savedEvents = localStorage.getItem('asian_events');
-            if(savedEvents) {
-                window.eventsData = JSON.parse(savedEvents);
-                renderEvents();
-                renderAdminAnswersSetup();
-            }
+            fetchEventsFromCloud();
         });
     </script>
 </body>
