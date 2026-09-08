@@ -55,6 +55,9 @@
                     <input type="text" id="participant-nickname" placeholder="Es. DragoRosso2026" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-asianPurple focus:outline-none">
                     <button id="btn-start" onclick="unlockEvents()" class="bg-asianPurple hover:bg-asianDark text-asianYellow font-bold px-4 py-2 rounded-lg shadow transition whitespace-nowrap">Conferma</button>
                 </div>
+                <div class="text-xs text-gray-500 bg-purple-50 p-3 rounded-lg border border-purple-100 mt-4">
+                    💡 Inserisci un nickname unico e clicca "Conferma" per sbloccare le schede. Scegli con cura 1 opzione per ogni evento!
+                </div>
             </div>
         </section>
 
@@ -63,9 +66,9 @@
             <div class="flex items-center justify-between mb-4">
                 <h2 class="text-xl font-bold text-asianPurple flex items-center">
                     <span class="bg-asianPurple text-white rounded-full w-7 h-7 inline-flex items-center justify-center text-sm mr-2">2</span>
-                    Pronostici Eventi (15 in palio)
+                    Pronostici Eventi
                 </h2>
-                <span id="events-counter" class="text-xs font-bold bg-asianYellow text-asianDark px-3 py-1 rounded-full">0 / 15 Compilati</span>
+                <span id="events-counter" class="text-xs font-bold bg-asianYellow text-asianDark px-3 py-1 rounded-full">0 / 0 Compilati</span>
             </div>
             
             <div id="events-container" class="space-y-4">
@@ -119,7 +122,7 @@
                 </div>
 
                 <div id="tab-excel" class="space-y-4">
-                    <h4 class="font-bold text-gray-700">Carica il file Excel dei 15 Eventi</h4>
+                    <h4 class="font-bold text-gray-700">Carica il file Excel degli Eventi</h4>
                     <p class="text-xs text-gray-500">Il file deve contenere le colonne: <span class="font-semibold text-asianPurple">Data, Sport, Evento, Picking #A, Picking #B, Picking #C, Picking #field</span></p>
                     <input type="file" id="excel-file-input" accept=".xlsx, .xls" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-asianPurple hover:file:bg-purple-100">
                     <button onclick="handleExcelUpload()" class="bg-asianPurple text-asianYellow font-bold px-4 py-2 rounded shadow text-sm">Elabora e Pubblica Eventi</button>
@@ -202,7 +205,7 @@
         window.eventsData = [];
         window.userSelections = {};
         window.correctAnswers = {};
-        window.lastParticipantsList = []; // Array per memorizzare i dati da esportare
+        window.lastParticipantsList = []; 
 
         async function fetchEventsFromCloud() {
             if(isFirebaseActive && db) {
@@ -221,6 +224,14 @@
                 if(savedEvents) {
                     window.eventsData = JSON.parse(savedEvents);
                 }
+            }
+            
+            // Aggiorna il contatore in modo dinamico se gli eventi sono già caricati
+            const count = Object.keys(window.userSelections).length;
+            const total = window.eventsData ? window.eventsData.length : 0;
+            const counterElement = document.getElementById('events-counter');
+            if (counterElement) {
+                counterElement.innerText = `${count} / ${total} Compilati`;
             }
         }
 
@@ -297,7 +308,15 @@
 
                 localStorage.setItem('asian_events', JSON.stringify(window.eventsData));
                 renderAdminAnswersSetup();
-                alert(`Caricati e pubblicati con successo ${window.eventsData.length} eventi online! I partecipanti ora li vedranno subito.`);
+                
+                // Aggiorna il contatore per l'admin
+                const total = window.eventsData.length;
+                const counterElement = document.getElementById('events-counter');
+                if (counterElement) {
+                    counterElement.innerText = `0 / ${total} Compilati`;
+                }
+
+                alert(`Caricati e pubblicati con successo ${total} eventi online! I partecipanti ora li vedranno subito.`);
             };
             reader.readAsArrayBuffer(file);
         }
@@ -343,7 +362,8 @@
         window.selectOption = function(eventId, choiceKey, choiceText) {
             window.userSelections[eventId] = { key: choiceKey, text: choiceText };
             const count = Object.keys(window.userSelections).length;
-            document.getElementById('events-counter').innerText = `${count} / 15 Compilati`;
+            const total = window.eventsData.length;
+            document.getElementById('events-counter').innerText = `${count} / ${total} Compilati`;
         }
 
         window.submitContest = async function() {
@@ -532,7 +552,7 @@
             });
 
             participantsList.sort((a, b) => b.score - a.score);
-            window.lastParticipantsList = participantsList; // Memorizza globalmente per l'export su Sheets
+            window.lastParticipantsList = participantsList; 
 
             const tbody = document.getElementById('ranking-tbody');
             tbody.innerHTML = '';
@@ -558,7 +578,6 @@
             });
         }
         
-        // NUOVA FUNZIONE: Esporta i dati per Google Sheets
         window.exportToGoogleSheets = function() {
             if(!window.lastParticipantsList || window.lastParticipantsList.length === 0) {
                 alert("Non ci sono dati da esportare!");
@@ -567,14 +586,12 @@
             
             let dataForExcel = [];
             
-            // Crea la prima riga (Le intestazioni delle colonne)
             let headers = ["Nickname", "Punteggio Totale"];
             window.eventsData.forEach(ev => {
                 headers.push(`Evento ${ev.id}: ${ev.evento}`);
             });
             dataForExcel.push(headers);
             
-            // Crea una riga per ogni partecipante
             window.lastParticipantsList.forEach(p => {
                 let row = [p.nickname, p.score];
                 window.eventsData.forEach(ev => {
@@ -584,7 +601,6 @@
                 dataForExcel.push(row);
             });
             
-            // Genera il file e scaricalo
             const ws = XLSX.utils.aoa_to_sheet(dataForExcel);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "Pronostici_AsianGames");
