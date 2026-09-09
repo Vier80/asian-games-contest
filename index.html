@@ -56,7 +56,7 @@
                     <button id="btn-start" onclick="unlockEvents()" class="bg-asianPurple hover:bg-asianDark text-asianYellow font-bold px-4 py-2 rounded-lg shadow transition whitespace-nowrap">Conferma</button>
                 </div>
                 <div class="text-xs text-gray-500 bg-purple-50 p-3 rounded-lg border border-purple-100 mt-4">
-                    💡 Inserisci un nickname unico e clicca "Conferma" per sbloccare le schede. Scegli con cura 1 opzione per ogni evento!
+                    💡 Inserisci un nickname unico e clicca "Conferma" per sbloccare le schede. Scegli con cura 1 opzione per ogni evento! Puoi anche salvare in bozza e riprendere più tardi.
                 </div>
             </div>
         </section>
@@ -80,9 +80,12 @@
 
         <!-- SEZIONE 3: PULSANTI DI INVIO / PDF -->
         <section id="action-section" class="bg-white rounded-xl shadow-md p-6 mb-8 text-center hidden">
-            <h3 class="text-lg font-bold text-asianPurple mb-2">Sei pronto a inviare i tuoi pronostici?</h3>
-            <p class="text-sm text-gray-600 mb-6">Assicurati di aver risposto a tutti gli eventi prima di inviare all'Admin.</p>
+            <h3 class="text-lg font-bold text-asianPurple mb-2">Salva o Invia i tuoi pronostici</h3>
+            <p class="text-sm text-gray-600 mb-6">Usa il tasto Salva se vuoi continuare in un secondo momento, oppure Invia se hai completato tutti gli eventi.</p>
             <div class="flex flex-wrap justify-center gap-4">
+                <button onclick="saveDraft()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-3 rounded-lg shadow transition flex items-center space-x-2">
+                    <span>💾 Salva in Bozza ed Esci</span>
+                </button>
                 <button onclick="generatePDF()" class="bg-gray-800 hover:bg-black text-white font-bold px-6 py-3 rounded-lg shadow transition flex items-center space-x-2">
                     <span>📄 Scarica Riepilogo PDF</span>
                 </button>
@@ -148,6 +151,7 @@
                                 <tr class="bg-asianPurple text-white">
                                     <th class="p-2">Pos</th>
                                     <th class="p-2">Nickname</th>
+                                    <th class="p-2">Stato</th>
                                     <th class="p-2">Punteggio</th>
                                     <th class="p-2 text-center">Azioni / Pronostici</th>
                                 </tr>
@@ -225,14 +229,6 @@
                     window.eventsData = JSON.parse(savedEvents);
                 }
             }
-            
-            // Aggiorna il contatore in modo dinamico se gli eventi sono già caricati
-            const count = Object.keys(window.userSelections).length;
-            const total = window.eventsData ? window.eventsData.length : 0;
-            const counterElement = document.getElementById('events-counter');
-            if (counterElement) {
-                counterElement.innerText = `${count} / ${total} Compilati`;
-            }
         }
 
         window.unlockEvents = async function() {
@@ -250,6 +246,25 @@
                 alert("L'Admin non ha ancora caricato gli eventi del contest! Riprova più tardi.");
                 return;
             }
+
+            // CONTROLLA SE ESISTE UN SALVATAGGIO PRECEDENTE PER QUESTO NICKNAME
+            if(isFirebaseActive && db) {
+                try {
+                    const docSnap = await getDoc(doc(db, "participants", nick));
+                    if(docSnap.exists()) {
+                        window.userSelections = docSnap.data().selections || {};
+                        alert(`Bentornato ${nick}! Abbiamo recuperato i tuoi pronostici salvati.`);
+                    }
+                } catch(err) {
+                    console.error("Errore recupero dati utente:", err);
+                }
+            } else {
+                let localParts = JSON.parse(localStorage.getItem('local_participants') || "{}");
+                if(localParts[nick]) {
+                    window.userSelections = localParts[nick].selections || {};
+                    alert(`Bentornato ${nick}! Abbiamo recuperato i tuoi pronostici salvati localmente.`);
+                }
+            }
             
             nickInput.disabled = true;
             const btnStart = document.getElementById('btn-start');
@@ -261,6 +276,11 @@
 
             renderEvents();
             renderAdminAnswersSetup();
+
+            // Aggiorna il contatore
+            const count = Object.keys(window.userSelections).length;
+            const total = window.eventsData.length;
+            document.getElementById('events-counter').innerText = `${count} / ${total} Compilati`;
 
             document.getElementById('events-section').classList.remove('hidden');
             document.getElementById('action-section').classList.remove('hidden');
@@ -309,7 +329,6 @@
                 localStorage.setItem('asian_events', JSON.stringify(window.eventsData));
                 renderAdminAnswersSetup();
                 
-                // Aggiorna il contatore per l'admin
                 const total = window.eventsData.length;
                 const counterElement = document.getElementById('events-counter');
                 if (counterElement) {
@@ -327,6 +346,9 @@
 
             container.innerHTML = '';
             window.eventsData.forEach((ev) => {
+                // Controlliamo se questo evento era già stato scelto in precedenza (per i salvataggi)
+                const preScelta = window.userSelections[ev.id]?.key || null;
+
                 const div = document.createElement('div');
                 div.className = "bg-white p-5 rounded-xl shadow-md border-l-4 border-asianPurple mb-4";
                 div.innerHTML = `
@@ -338,19 +360,19 @@
                     <p class="text-xs text-gray-500 mb-2">Seleziona 1 sola opzione:</p>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         <label class="flex items-center space-x-2 p-2 rounded border border-gray-200 hover:bg-purple-50 cursor-pointer">
-                            <input type="radio" name="event_${ev.id}" value="A" onchange="selectOption(${ev.id}, 'A', '${ev.A.replace(/'/g, "\\'")}')">
+                            <input type="radio" name="event_${ev.id}" value="A" ${preScelta === 'A' ? 'checked' : ''} onchange="selectOption(${ev.id}, 'A', '${ev.A.replace(/'/g, "\\'")}')">
                             <span class="text-sm"><strong>[A - 15 pt]:</strong> ${ev.A}</span>
                         </label>
                         <label class="flex items-center space-x-2 p-2 rounded border border-gray-200 hover:bg-purple-50 cursor-pointer">
-                            <input type="radio" name="event_${ev.id}" value="B" onchange="selectOption(${ev.id}, 'B', '${ev.B.replace(/'/g, "\\'")}')">
+                            <input type="radio" name="event_${ev.id}" value="B" ${preScelta === 'B' ? 'checked' : ''} onchange="selectOption(${ev.id}, 'B', '${ev.B.replace(/'/g, "\\'")}')">
                             <span class="text-sm"><strong>[B - 18 pt]:</strong> ${ev.B}</span>
                         </label>
                         <label class="flex items-center space-x-2 p-2 rounded border border-gray-200 hover:bg-purple-50 cursor-pointer">
-                            <input type="radio" name="event_${ev.id}" value="C" onchange="selectOption(${ev.id}, 'C', '${ev.C.replace(/'/g, "\\'")}')">
+                            <input type="radio" name="event_${ev.id}" value="C" ${preScelta === 'C' ? 'checked' : ''} onchange="selectOption(${ev.id}, 'C', '${ev.C.replace(/'/g, "\\'")}')">
                             <span class="text-sm"><strong>[C - 25 pt]:</strong> ${ev.C}</span>
                         </label>
                         <label class="flex items-center space-x-2 p-2 rounded border border-gray-200 hover:bg-purple-50 cursor-pointer">
-                            <input type="radio" name="event_${ev.id}" value="field" onchange="selectOption(${ev.id}, 'field', '${ev.field.replace(/'/g, "\\'")}')">
+                            <input type="radio" name="event_${ev.id}" value="field" ${preScelta === 'field' ? 'checked' : ''} onchange="selectOption(${ev.id}, 'field', '${ev.field.replace(/'/g, "\\'")}')">
                             <span class="text-sm"><strong>[field - 10 pt]:</strong> ${ev.field}</span>
                         </label>
                     </div>
@@ -366,21 +388,45 @@
             document.getElementById('events-counter').innerText = `${count} / ${total} Compilati`;
         }
 
+        // SALVATAGGIO IN BOZZA (Non richiede di finire tutti gli eventi)
+        window.saveDraft = async function() {
+            const nickname = document.getElementById('participant-nickname').value.trim();
+            const payload = {
+                nickname: nickname,
+                selections: window.userSelections,
+                timestamp: new Date().toISOString(),
+                isDraft: true // Segnala che è una bozza
+            };
+
+            if(isFirebaseActive && db) {
+                try {
+                    await setDoc(doc(db, "participants", nickname), payload);
+                    alert("💾 Bozza salvata con successo! Puoi chiudere la pagina e tornare quando vuoi reinserendo il tuo nickname.");
+                } catch(err) {
+                    console.error(err);
+                    alert("Errore durante il salvataggio.");
+                }
+            } else {
+                let localParts = JSON.parse(localStorage.getItem('local_participants') || "{}");
+                localParts[nickname] = payload;
+                localStorage.setItem('local_participants', JSON.stringify(localParts));
+                alert("💾 Bozza salvata in locale con successo!");
+            }
+        }
+
+        // INVIO DEFINITIVO (Richiede tutti gli eventi)
         window.submitContest = async function() {
             const nickname = document.getElementById('participant-nickname').value.trim();
-            if(!nickname) {
-                alert("Per favore, inserisci il tuo Nickname prima di inviare!");
-                return; 
-            }
             if(Object.keys(window.userSelections).length < window.eventsData.length) {
-                alert(`Hai completato ${Object.keys(window.userSelections).length} su ${window.eventsData.length} eventi. Rispondi a tutto prima di inviare!`);
+                alert(`Hai completato ${Object.keys(window.userSelections).length} su ${window.eventsData.length} eventi. Usa il tasto "Salva in Bozza" se vuoi finire dopo!`);
                 return;
             }
 
             const payload = {
                 nickname: nickname,
                 selections: window.userSelections,
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
+                isDraft: false // Invio definitivo
             };
 
             if(isFirebaseActive && db) {
@@ -558,16 +604,18 @@
             tbody.innerHTML = '';
 
             if(participantsList.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-gray-400">Nessun partecipante registrato finora.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-gray-400">Nessun partecipante registrato finora.</td></tr>`;
                 return;
             }
 
             participantsList.forEach((p, idx) => {
+                const isDraftStr = p.isDraft ? '<span class="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded">In Bozza</span>' : '<span class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">Inviato</span>';
                 const tr = document.createElement('tr');
                 tr.className = "border-b hover:bg-purple-50";
                 tr.innerHTML = `
                     <td class="p-2 font-bold">#${idx + 1}</td>
                     <td class="p-2 font-semibold text-asianPurple">${p.nickname}</td>
+                    <td class="p-2">${isDraftStr}</td>
                     <td class="p-2 font-bold text-gray-800">${p.score} pt</td>
                     <td class="p-2 text-center space-x-2">
                         <button onclick='showParticipantDetail(${JSON.stringify(p)})' class="bg-purple-100 text-asianPurple px-2 py-1 rounded text-xs font-bold">👁️ Vedi</button>
@@ -586,14 +634,15 @@
             
             let dataForExcel = [];
             
-            let headers = ["Nickname", "Punteggio Totale"];
+            let headers = ["Nickname", "Stato", "Punteggio Totale"];
             window.eventsData.forEach(ev => {
                 headers.push(`Evento ${ev.id}: ${ev.evento}`);
             });
             dataForExcel.push(headers);
             
             window.lastParticipantsList.forEach(p => {
-                let row = [p.nickname, p.score];
+                const stato = p.isDraft ? "In Bozza" : "Inviato";
+                let row = [p.nickname, stato, p.score];
                 window.eventsData.forEach(ev => {
                     let sel = p.selections[ev.id];
                     row.push(sel ? sel.text : "Nessuna Scelta");
