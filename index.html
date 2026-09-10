@@ -229,6 +229,13 @@
                     window.eventsData = JSON.parse(savedEvents);
                 }
             }
+            
+            const count = Object.keys(window.userSelections).length;
+            const total = window.eventsData ? window.eventsData.length : 0;
+            const counterElement = document.getElementById('events-counter');
+            if (counterElement) {
+                counterElement.innerText = `${count} / ${total} Compilati`;
+            }
         }
 
         window.unlockEvents = async function() {
@@ -247,7 +254,6 @@
                 return;
             }
 
-            // CONTROLLA SE ESISTE UN SALVATAGGIO PRECEDENTE PER QUESTO NICKNAME
             if(isFirebaseActive && db) {
                 try {
                     const docSnap = await getDoc(doc(db, "participants", nick));
@@ -277,7 +283,6 @@
             renderEvents();
             renderAdminAnswersSetup();
 
-            // Aggiorna il contatore
             const count = Object.keys(window.userSelections).length;
             const total = window.eventsData.length;
             document.getElementById('events-counter').innerText = `${count} / ${total} Compilati`;
@@ -346,7 +351,6 @@
 
             container.innerHTML = '';
             window.eventsData.forEach((ev) => {
-                // Controlliamo se questo evento era già stato scelto in precedenza (per i salvataggi)
                 const preScelta = window.userSelections[ev.id]?.key || null;
 
                 const div = document.createElement('div');
@@ -388,14 +392,13 @@
             document.getElementById('events-counter').innerText = `${count} / ${total} Compilati`;
         }
 
-        // SALVATAGGIO IN BOZZA (Non richiede di finire tutti gli eventi)
         window.saveDraft = async function() {
             const nickname = document.getElementById('participant-nickname').value.trim();
             const payload = {
                 nickname: nickname,
                 selections: window.userSelections,
                 timestamp: new Date().toISOString(),
-                isDraft: true // Segnala che è una bozza
+                isDraft: true 
             };
 
             if(isFirebaseActive && db) {
@@ -414,7 +417,6 @@
             }
         }
 
-        // INVIO DEFINITIVO (Richiede tutti gli eventi)
         window.submitContest = async function() {
             const nickname = document.getElementById('participant-nickname').value.trim();
             if(Object.keys(window.userSelections).length < window.eventsData.length) {
@@ -426,7 +428,7 @@
                 nickname: nickname,
                 selections: window.userSelections,
                 timestamp: new Date().toISOString(),
-                isDraft: false // Invio definitivo
+                isDraft: false 
             };
 
             if(isFirebaseActive && db) {
@@ -491,11 +493,17 @@
             window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
         }
 
-        window.verifyAdmin = function() {
+        window.verifyAdmin = async function() {
             const pass = document.getElementById('admin-pass').value;
             if(pass === "Stefan023*") {
                 document.getElementById('admin-login-box').classList.add('hidden');
                 document.getElementById('admin-dashboard').classList.remove('hidden');
+                
+                // LA MAGIA CHE RISOLVE IL PROBLEMA: Assicuriamoci di avere i dati dal cloud
+                await fetchEventsFromCloud(); 
+                // Disegniamo subito i menu a tendina delle risposte corrette!
+                renderAdminAnswersSetup();
+                
                 loadAdminAnswers();
                 loadParticipantsData();
             } else {
@@ -523,6 +531,12 @@
         function renderAdminAnswersSetup() {
             const container = document.getElementById('admin-answers-container');
             container.innerHTML = '';
+            
+            if(!window.eventsData || window.eventsData.length === 0) {
+                 container.innerHTML = '<p class="text-sm text-gray-500">Nessun evento caricato. Vai su "Carica Excel".</p>';
+                 return;
+            }
+
             window.eventsData.forEach(ev => {
                 const div = document.createElement('div');
                 div.className = "p-3 bg-gray-50 rounded border";
